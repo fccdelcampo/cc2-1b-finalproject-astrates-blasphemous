@@ -1,5 +1,6 @@
 import random
 import time
+from collections import deque
 
 class Cell:
     def __init__(self, symbol, passable=True):
@@ -86,32 +87,68 @@ def fade_in_text(text, delay=0.001):
         time.sleep(delay)
     print()
 
+def is_path_exists(grid, start, end):
+    visited = set()
+    queue = deque([start])
+
+    while queue:
+        current_x, current_y = queue.popleft()
+        if (current_x, current_y) == end:
+            return True
+
+        for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            next_x, next_y = current_x + dx, current_y + dy
+            if 0 < next_x < len(grid[0]) - 1 and 0 < next_y < len(grid) - 1 and grid[next_y][next_x].symbol == ' ' and (next_x, next_y) not in visited:
+                visited.add((next_x, next_y))
+                queue.append((next_x, next_y))
+
+    return False
+
 def play_game():
     width = 20
     height = 10
-    num_enemies = 3
+    num_enemies = 5
 
+    enemies_defeated = 0
+    
     grid = Grid(width, height)
     grid.generate_maze()  # Start generating maze from (1, 1) to ensure an open space
-    player_x, player_y = grid.spawn_entity('P', 1, 1)
+    player_x, player_y = (1, 1)
 
     player = Entity("Hero", 100, 10, 20)
-    enemies = [Entity(f"Enemy{i}", random.randint(20, 50), random.randint(5, 10), random.randint(5, 15)) for i in
-               range(num_enemies)]
-    enemy_positions = [grid.spawn_entity('E', random.randint(0, width - 1), random.randint(0, height - 1)) for _ in range(num_enemies)]
 
-    while True:
+    # Initialize enemies and their positions
+    enemies = []
+    enemy_positions = []
+
+    for i in range(num_enemies):
+        # Try to find a valid position for the enemy
+        while True:
+            enemy_x = random.randint(1, width - 2)
+            enemy_y = random.randint(1, height - 2)
+
+            # Check if there is a path from player to the enemy
+            if is_path_exists(grid.cells, (player_x, player_y), (enemy_x, enemy_y)):
+                break
+
+        enemies.append(Entity(f"Enemy{i}", random.randint(20, 50), random.randint(5, 10), random.randint(5, 15)))
+        enemy_positions.append(grid.spawn_entity('E', enemy_x, enemy_y))
+
+    while enemies_defeated != 5:
         grid.print_grid(player_x, player_y)
         print("\nPlayer Stats:")
         print(f"Name: {player.name}")
         print(f"HP: {player.health}")
         print(f"Speed: {player.speed}")
         print(f"Attack: {player.attack}")
+        
+        # Check if there are no more enemies
+
 
         for enemy, (enemy_x, enemy_y) in zip(enemies, enemy_positions):
             if (abs(player_x - enemy_x) == 1 and player_y == enemy_y) or \
                     (player_x == enemy_x and abs(player_y - enemy_y) == 1):
-                print(f"Encountered {enemy.name}!")
+                print(f"Encountered {enemy.name} or {enemy.name}'s previous position!")
                 while player.is_alive() and enemy.is_alive():
                     grid.print_grid(player_x, player_y)
                     print("\nPlayer Stats:")
@@ -140,6 +177,8 @@ def play_game():
                         else:
                             print(f"\nYou defeated {enemy.name}!")
                             grid.remove_entity(enemy_x, enemy_y)
+                            del(enemy)
+                            enemies_defeated += 1
                             break
 
                     elif action == 'q':
@@ -169,6 +208,10 @@ def play_game():
             # Check if the new position is within the maze
             if 0 < new_player_x < width - 1 and 0 < new_player_y < height - 1:
                 player_x, player_y = new_player_x, new_player_y
+                
+    # Print credits after the game is over
+    print("Congratulations, you defeated all enemies, you won!")
+    print(credits)
 
 def main():
     name = input("What's your name?\n")
@@ -246,4 +289,19 @@ def main():
             print("Invalid choice. Please enter a valid option.")
 
 if __name__ == "__main__":
+    # Move these lines to the global scope
+    player = Entity("Hero", 100, 10, 20)
+    width = 20
+    height = 10
+    num_enemies = 5
+
+    grid = Grid(width, height)
+    grid.generate_maze()  # Start generating maze from (1, 1) to ensure an open space
+    player_x, player_y = (1, 1)
+
+    enemies = [Entity(f"Enemy{i}", random.randint(20, 50), random.randint(5, 10), random.randint(5, 15)) for i in
+               range(num_enemies)]
+    enemy_positions = [grid.spawn_entity('E', random.randint(0, width - 1), random.randint(0, height - 1)) for _ in
+                       range(num_enemies)]
+
     main()
