@@ -104,7 +104,11 @@ def is_path_exists(grid, start, end):
 
     return False
 
+def calculate_distance(x1, y1, x2, y2):
+    return abs(x1 - x2) + abs(y1 - y2)
+
 def play_game():
+     
     width = 20
     height = 10
     num_enemies = 5
@@ -115,14 +119,25 @@ def play_game():
     grid.generate_maze()  # Start generating maze from (1, 1) to ensure an open space
     player_x, player_y = (1, 1)
 
-    player = Entity("Hero", 100, 10, 20)
+    player = Entity("Penitent One", 100, 10, 20)
 
     # Initialize enemies and their positions
     enemies = []
     enemy_positions = []
 
     for i in range(num_enemies):
-        # Try to find a valid position for the enemy
+        # Try to find a valid position for the enemy near the player
+        if i == 0:
+            enemyname = "Candelabra"
+        elif i == 1:
+            enemyname = "Tie Piedad"
+        elif i == 2:
+            enemyname = "Dullahan"
+        elif i == 3:
+            enemyname = "His Holiness Escribar"
+        elif i == 4:
+            enemyname = "Jax"
+        
         while True:
             enemy_x = random.randint(1, width - 2)
             enemy_y = random.randint(1, height - 2)
@@ -131,8 +146,9 @@ def play_game():
             if is_path_exists(grid.cells, (player_x, player_y), (enemy_x, enemy_y)):
                 break
 
-        enemies.append(Entity(f"Enemy{i}", random.randint(20, 50), random.randint(5, 10), random.randint(5, 15)))
-        enemy_positions.append(grid.spawn_entity('E', enemy_x, enemy_y))
+        enemies.append(Entity(enemyname, random.randint(20, 50), random.randint(5, 10), random.randint(5, 15)))
+        enemy_positions.append((enemy_x, enemy_y))  # Store the position as a tuple
+
 
     while enemies_defeated != 5:
         grid.print_grid(player_x, player_y)
@@ -145,11 +161,35 @@ def play_game():
         # Check if there are no more enemies
 
 
+        if player.is_alive():
+            # Get user input for movement or quitting
+            action = input("\nEnter 'w' to move up, 'a' to move left, 's' to move down, 'd' to move right, or 'q' to quit: ")
+
+            if action == 'q':
+                print("You quit the game.")
+                break
+
+            # Move player based on input
+            new_player_x, new_player_y = player_x, player_y
+
+            if action == 'w' and player_y > 1 and grid.cells[player_y - 1][player_x].symbol == ' ':
+                new_player_y -= 1
+            elif action == 'a' and player_x > 1 and grid.cells[player_y][player_x - 1].symbol == ' ':
+                new_player_x -= 1
+            elif action == 's' and player_y < height - 2 and grid.cells[player_y + 1][player_x].symbol == ' ':
+                new_player_y += 1
+            elif action == 'd' and player_x < width - 2 and grid.cells[player_y][player_x + 1].symbol == ' ':
+                new_player_x += 1
+
+            # Check if the new position is within the maze
+            if 0 < new_player_x < width - 1 and 0 < new_player_y < height - 1:
+                player_x, player_y = new_player_x, new_player_y
+                
         for enemy, (enemy_x, enemy_y) in zip(enemies, enemy_positions):
-            if (abs(player_x - enemy_x) == 1 and player_y == enemy_y) or \
-                    (player_x == enemy_x and abs(player_y - enemy_y) == 1):
-                print(f"Encountered {enemy.name} or {enemy.name}'s previous position!")
-                while player.is_alive() and enemy.is_alive():
+            if ((abs(player_x - enemy_x) == 1 and player_y == enemy_y) or (player_x == enemy_x and abs(player_y - enemy_y) == 1)) and enemy.is_alive():
+                print(f"Encountered {enemy.name}!")
+                print(grid.spawn_entity('E', enemy_x, enemy_y))
+                while (abs(player_x - enemy_x) == 1 and player_y == enemy_y) or (player_x == enemy_x and abs(player_y - enemy_y) == 1) and player.is_alive() and enemy.is_alive():
                     grid.print_grid(player_x, player_y)
                     print("\nPlayer Stats:")
                     print(f"Name: {player.name}")
@@ -185,33 +225,9 @@ def play_game():
                         print("You ran away from the battle.")
                         break
 
-        if player.is_alive():
-            # Get user input for movement or quitting
-            action = input("\nEnter 'w' to move up, 'a' to move left, 's' to move down, 'd' to move right, or 'q' to quit: ")
-
-            if action == 'q':
-                print("You quit the game.")
-                break
-
-            # Move player based on input
-            new_player_x, new_player_y = player_x, player_y
-
-            if action == 'w' and player_y > 1 and grid.cells[player_y - 1][player_x].symbol == ' ':
-                new_player_y -= 1
-            elif action == 'a' and player_x > 1 and grid.cells[player_y][player_x - 1].symbol == ' ':
-                new_player_x -= 1
-            elif action == 's' and player_y < height - 2 and grid.cells[player_y + 1][player_x].symbol == ' ':
-                new_player_y += 1
-            elif action == 'd' and player_x < width - 2 and grid.cells[player_y][player_x + 1].symbol == ' ':
-                new_player_x += 1
-
-            # Check if the new position is within the maze
-            if 0 < new_player_x < width - 1 and 0 < new_player_y < height - 1:
-                player_x, player_y = new_player_x, new_player_y
                 
     # Print credits after the game is over
     print("Congratulations, you defeated all enemies, you won!")
-    print(credits)
 
 def main():
     name = input("What's your name?\n")
@@ -251,7 +267,7 @@ def main():
 
     border = "=========================================================================================="
 
-    credits = """
+    game_credits = """
      Thank you for playing our game. Whether you won or lost doesn't matter, as long as you enjoyed.
      Hope you play our game again.
 
@@ -283,14 +299,14 @@ def main():
             print(f"Speed: {player.speed}")
             print(f"Attack: {player.attack}")
         elif navchoice == '3':
-            print(credits)
+            print(game_credits)
             break
         else:
             print("Invalid choice. Please enter a valid option.")
 
 if __name__ == "__main__":
     # Move these lines to the global scope
-    player = Entity("Hero", 100, 10, 20)
+    player = Entity("Penitent One", 100, 10, 20)
     width = 20
     height = 10
     num_enemies = 5
